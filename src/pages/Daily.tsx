@@ -4,6 +4,7 @@ import { DateNavigator } from '@/components/daily/DateNavigator';
 import { TaskItem } from '@/components/daily/TaskItem';
 import { AddTaskModal } from '@/components/daily/AddTaskModal';
 import { useAppStore } from '@/store/useAppStore';
+import type { WeekDay } from '@/types';
 import { getToday, formatFullDisplayDate, getWeekDay } from '@/utils/date';
 import { cn } from '@/lib/utils';
 
@@ -11,7 +12,7 @@ export default function DailyPage() {
   const [selectedDate, setSelectedDate] = useState(getToday());
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  const { dailyTasks, addDailyTask, toggleDailyTask, deleteDailyTask } = useAppStore();
+  const { dailyTasks, addDailyTask, addRecurringTask, toggleDailyTask, deleteDailyTask } = useAppStore();
   
   const dayTasks = dailyTasks
     .filter((task) => task.date === selectedDate)
@@ -30,11 +31,20 @@ export default function DailyPage() {
     priority: 'high' | 'medium' | 'low';
     note?: string;
     duration?: number;
+    repeatDays?: WeekDay[];
+    reminderTime?: string;
   }) => {
-    addDailyTask({
-      ...task,
-      date: selectedDate,
-    });
+    if (task.repeatDays && task.repeatDays.length > 0) {
+      addRecurringTask({
+        ...task,
+        repeatDays: task.repeatDays,
+      });
+    } else {
+      addDailyTask({
+        ...task,
+        date: selectedDate,
+      });
+    }
   };
 
   const highPriorityTasks = dayTasks.filter((t) => t.priority === 'high' && !t.completed);

@@ -1,4 +1,4 @@
-import { Check, Trash2, Flag, Clock } from 'lucide-react';
+import { Check, Trash2, Flag, Clock, Bell, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DailyTask } from '@/types';
 
@@ -14,8 +14,16 @@ const priorityConfig = {
   low: { color: 'bg-sage-400', label: '低', textColor: 'text-sage-500' },
 };
 
+const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
 export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
   const priority = priorityConfig[task.priority];
+  
+  const formatRepeatDays = () => {
+    if (!task.repeatDays || task.repeatDays.length === 0) return '';
+    if (task.repeatDays.length === 7) return '每天';
+    return task.repeatDays.map(d => weekDays[d]).join('、');
+  };
   
   return (
     <div
@@ -44,16 +52,33 @@ export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
           )}>
             {task.title}
           </p>
+          {task.repeatDays && task.repeatDays.length > 0 && (
+            <span className="flex-shrink-0 text-xs bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <Repeat size={10} />
+              重复
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-3 mt-1 text-xs">
+        <div className="flex items-center gap-2 mt-1 text-xs flex-wrap">
           <span className={cn('flex items-center gap-1', priority.textColor)}>
             <Flag size={12} fill="currentColor" />
-            {priority.label}优先级
+            {priority.label}
           </span>
           {task.duration && (
             <span className="flex items-center gap-1 text-brown-700/50">
               <Clock size={12} />
               {task.duration}分钟
+            </span>
+          )}
+          {task.reminderTime && (
+            <span className="flex items-center gap-1 text-amber-500">
+              <Bell size={12} />
+              {task.reminderTime}
+            </span>
+          )}
+          {task.repeatDays && task.repeatDays.length > 0 && (
+            <span className="text-brown-700/50">
+              {formatRepeatDays()}
             </span>
           )}
         </div>

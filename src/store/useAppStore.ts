@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { DailyTask, Goal, Milestone, GoalTask, AppSettings } from '@/types';
-import { generateId, getToday } from '@/utils/date';
+import type { DailyTask, Goal, Milestone, GoalTask, AppSettings, WeekDay } from '@/types';
+import { generateId, getToday, addDays } from '@/utils/date';
 
 interface AppState {
   dailyTasks: DailyTask[];
@@ -11,11 +11,13 @@ interface AppState {
   settings: AppSettings;
   
   addDailyTask: (task: Omit<DailyTask, 'id' | 'createdAt' | 'updatedAt' | 'completed'>) => void;
+  addRecurringTask: (task: Omit<DailyTask, 'id' | 'createdAt' | 'updatedAt' | 'completed' | 'date'> & { repeatDays: WeekDay[] }) => void;
   toggleDailyTask: (id: string) => void;
   deleteDailyTask: (id: string) => void;
   updateDailyTask: (id: string, updates: Partial<DailyTask>) => void;
   
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => void;
+  generateRecurringTasksForWeek: () => void;
   updateGoal: (id: string, updates: Partial<Goal>) => void;
   deleteGoal: (id: string) => void;
   toggleGoalStatus: (id: string) => void;
@@ -56,6 +58,74 @@ export const useAppStore = create<AppState>()(
           ],
         })),
 
+      addRecurringTask: (task) =>
+        set((state) => {
+          const newTasks: DailyTask[] = [];
+          const today = getToday();
+          
+          for (let i = 0; i < 365; i++) {
+            const date = addDays(today, i);
+            const dateObj = new Date(date);
+            const dayOfWeek = dateObj.getDay() as WeekDay;
+            
+            if (task.repeatDays.includes(dayOfWeek)) {
+              const existingTask = state.dailyTasks.find(
+                t => t.date === date && t.title === task.title && t.repeatDays?.includes(dayOfWeek)
+              );
+              if (!existingTask) {
+                newTasks.push({
+                  ...task,
+                  date,
+                  id: generateId(),
+                  completed: false,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+              }
+            }
+          }
+          
+          return {
+            dailyTasks: [...state.dailyTasks, ...newTasks],
+          };
+        }),
+
+      generateRecurringTasksForWeek: () =>
+        set((state) => {
+          const today = getToday();
+          const recurringTasks = state.dailyTasks.filter(t => t.repeatDays && t.repeatDays.length > 0);
+          const newTasks: DailyTask[] = [];
+          
+          for (let i = 0; i < 7; i++) {
+            const date = addDays(today, i);
+            const dateObj = new Date(date);
+            const dayOfWeek = dateObj.getDay() as WeekDay;
+            
+            recurringTasks.forEach(task => {
+              if (task.repeatDays?.includes(dayOfWeek)) {
+                const existingTask = state.dailyTasks.find(
+                  t => t.date === date && t.title === task.title && !t.repeatDays
+                );
+                if (!existingTask) {
+                  newTasks.push({
+                    ...task,
+                    date,
+                    id: generateId(),
+                    completed: false,
+                    repeatDays: undefined,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  });
+                }
+              }
+            });
+          }
+          
+          return {
+            dailyTasks: [...state.dailyTasks, ...newTasks],
+          };
+        }),
+
       toggleDailyTask: (id) =>
         set((state) => ({
           dailyTasks: state.dailyTasks.map((task) =>
@@ -87,6 +157,9 @@ export const useAppStore = create<AppState>()(
               ...goal,
               id: generateId(),
               status: 'active',
+              reminderEnabled: goal.reminderEnabled ?? true,
+              reminderDaysBefore: goal.reminderDaysBefore ?? 5,
+              reminderTime: goal.reminderTime ?? '09:00',
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             },

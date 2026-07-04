@@ -1,3 +1,5 @@
+export type WeekDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
 export interface DailyTask {
   id: string;
   title: string;
@@ -6,6 +8,8 @@ export interface DailyTask {
   date: string;
   note?: string;
   duration?: number;
+  repeatDays?: WeekDay[];
+  reminderTime?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -18,6 +22,9 @@ export interface Goal {
   endDate: string;
   status: 'active' | 'completed' | 'paused';
   emoji: string;
+  reminderEnabled: boolean;
+  reminderDaysBefore: number;
+  reminderTime: string;
   createdAt: string;
   updatedAt: string;
 }
